@@ -3,6 +3,23 @@ import numpy as np
 from sklearn.decomposition import PCA
 from sklearn.svm import SVR
 
+#-------------------------------------------------------------------------------\
+def getAnovaKernel(gamma, D):
+	return lambda x, y: anovaKernel(x, y, gamma, D) 
+
+def anovaKernel(x, y, gamma, D):
+	gramMatrix = np.zeros([len(x), len(y)])
+	for i in range(len(x)):
+		for j in range(len(y)):
+			entry = 0
+			for k in range(len(x[0])):
+				entry += np.power(
+					np.exp( 
+						-gamma* np.power(x[i][k]-y[j][k], 2) 
+					), D)
+			gramMatrix[i, j] = entry
+	return gramMatrix
+
 #-------------------------------------------------------------------------------
 
 '''
