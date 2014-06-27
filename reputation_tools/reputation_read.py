@@ -8,7 +8,7 @@ import time
 #-------------------------------------------------------------------------------
 
 # verdict_flag is not treated as a field
-fields = [
+sender_fields = [
     "requests",
     "delivered",
     "bounces",
@@ -37,7 +37,7 @@ FILTER_MAPPINGS = {
 }
 
 def decodeFlag(flag):
-	features = np.zeros(6)
+	features = np.zeros(7)
 	for flagIndex, featureIndex in FILTER_MAPPINGS.iteritems():
 		flag >> (flagIndex - 1) & 1
 		if featureIndex:
@@ -53,43 +53,82 @@ Read in data from the senders and average it over the gathered time. Keep a dict
 
 def read_senders(datafile):
     
+    n_fields = len(sender_fields)
     row_dict = {}
     uid_dict = {}
-    entry_count = []
-    sender_data = []
-    
-    
-    n_fields = len(fields)
+    sender_stats = np.zeros((0,0))    
     
     # Read each line of the data file
-    for content in datafile:
-        decoded = json.loads(content)
-        uid = decoded['user_id']
+    rawtext = datafile.read().replace("\'","\"").replace("NULL","\"NULL\"") 
+    decoded = json.loads(rawtext)
+    for content in decoded:
+        
+        uid = content['user_id']
+        flag = content["verdict_flag"]
+        features = decodeFlag(flag)
+        n_features = len(features)
         
         # Create new entries if needed and increment the count of visits to a particular sender to normalize later
         if not uid_dict.has_key(uid):
-            sender_index = len(entry_count) + 1
+            sender_index = len(uid_dict)
             row_dict[sender_index] = uid
             uid_dict[uid] = sender_index
-            entry_count.append(1)
-            sender_data.append([0]*n_fields)
+            temp_sender_stats = sender_stats
+            sender_stats = np.zeros((sender_index+1,n_fields+n_features))
+            sender_stats[:-1,:] = temp_sender_stats
         else:
             sender_index = uid_dict[uid]
-            entry_count[sender_index] += 1
             
         # Add counts for each of the fields and mail channels + blacklists (stored in verdict flag)    
         for index in range(n_fields):
-            sender_data[sender_index][index] += decoded[fields[index]]
-        flag = decoded["verdict_flag"]
-        features = decodeFlag(flag)
-        n_features = len(features)
+            sender_stats[sender_index,index] += content[sender_fields[index]]
         for index in range(n_features):
-            sender_data[sender_index][n_fields+index] = features[index]
-        
-    # Convert to arrays and normalize the sums to form averages
-    sender_data = np.array(sender_data)
-    entry_count = np.array(entry_count)
-    sender_data = (sender_data.T/entry_count).T
+            sender_stats[sender_index,n_fields+index] = features[index]
 
-    return sender_data
+    return sender_stats,row_dict,uid_dict
     
+#-------------------------------------------------------------------------------
+
+'''
+read_punitive_actions:
+Read in data on punitive actions taken against senders. Keep a dictionary of col/punitive actions
+'''
+
+def read_punitive_actions(datafile,uid_dict):
+            
+    n_senders = len(uid_dict)
+    col_dict = {}
+    pa_dict = {}
+    punative_actions = np.zeros((0,0))
+    
+    # Read each line of the data file
+    rawtext = datafile.read().replace("\'","\"").replace("NULL","\"NULL\"")
+    decoded = json.loads(rawtext)
+    for content in decoded:
+        uid = content['id']
+        pa = content['event_name']
+        row = uid_dict[uid]
+        
+        # Create new entries if needed
+        if not pa_dict.has_key(pa):
+            pa_index = len(pa_dict)
+            col_dict[pa_index] = pa
+            pa_dict[pa] = pa_index
+            temp_punative_actions = punative_actions
+            punative_actions = np.zeros((n_senders,pa_index+1))
+            punative_actions[:,:-1] = temp_punative_actions
+            
+        else:
+            pa_index = pa_dict[pa]
+            
+        punative_actions[row,pa_index] += 1.0
+        
+        return punative_actions,col_dict,pa_dict
+        
+            
+            
+            
+            
+        
+        
+        
