@@ -37,11 +37,16 @@ FILTER_MAPPINGS = {
 }
 
 def decodeFlag(flag):
+
 	features = np.zeros(7)
+    if flag is "NULL":
+        return features
+        
 	for flagIndex, featureIndex in FILTER_MAPPINGS.iteritems():
 		flag >> (flagIndex - 1) & 1
 		if featureIndex:
 			features[featureIndex] = 1
+            
 	return features
 
 #-------------------------------------------------------------------------------
@@ -75,7 +80,8 @@ def read_senders(datafile):
             uid_dict[uid] = sender_index
             temp_sender_stats = sender_stats
             sender_stats = np.zeros((sender_index+1,n_fields+n_features))
-            sender_stats[:-1,:] = temp_sender_stats
+            if not sender_index == 0:
+                sender_stats[:-1,:] = temp_sender_stats
         else:
             sender_index = uid_dict[uid]
             
@@ -99,7 +105,8 @@ def read_punitive_actions(datafile,uid_dict):
     n_senders = len(uid_dict)
     col_dict = {}
     pa_dict = {}
-    punative_actions = np.zeros((0,0))
+    punitive_actions = np.zeros((0,0))
+    count = 0
     
     # Read each line of the data file
     rawtext = datafile.read().replace("\'","\"").replace("NULL","\"NULL\"")
@@ -107,23 +114,27 @@ def read_punitive_actions(datafile,uid_dict):
     for content in decoded:
         uid = content['id']
         pa = content['event_name']
-        row = uid_dict[uid]
         
         # Create new entries if needed
-        if not pa_dict.has_key(pa):
-            pa_index = len(pa_dict)
-            col_dict[pa_index] = pa
-            pa_dict[pa] = pa_index
-            temp_punative_actions = punative_actions
-            punative_actions = np.zeros((n_senders,pa_index+1))
-            punative_actions[:,:-1] = temp_punative_actions
+        if uid_dict.has_key(uid):
+            row = uid_dict[uid]
+            if not pa_dict.has_key(pa):
+                pa_index = len(pa_dict)
+                col_dict[pa_index] = pa
+                pa_dict[pa] = pa_index
+                temp_punitive_actions = punitive_actions
+                punitive_actions = np.zeros((n_senders,pa_index+1))
+                if not pa_index == 0:
+                    punitive_actions[:,:-1] = temp_punitive_actions
+            else:
+                pa_index = pa_dict[pa]
             
+            punitive_actions[row,pa_index] += 1.0
         else:
-            pa_index = pa_dict[pa]
-            
-        punative_actions[row,pa_index] += 1.0
+            count += 1
+    print(count)
         
-        return punative_actions,col_dict,pa_dict
+    return punitive_actions,col_dict,pa_dict
         
             
             

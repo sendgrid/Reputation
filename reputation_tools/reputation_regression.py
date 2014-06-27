@@ -12,26 +12,26 @@ Project the stats onto a lower dimensional space which preserves variance up to 
 
 def reduce(stats,variance_cutoff):
     
-        pca = PCA()
-        pca.fit(stats)
-        evr = pca.explained_variance_ratio_
-        variance_sum = 0.0
-        n_components = stats.shape[0]
-        
-        # Select the number of components to keep based on the variance cutoff 
-        for index in range(num_components):
-            variance_sum += evr[index]
-            if variance_sum > variance_cutoff:
-                n_components = index+1
-                break
-                
-        # Project the stats onto the subset of components
-        pca = PCA(n_components = n_components)
-        pca.fit(stats)
-        reduced_stats = pca.transform(stats)
+    pca = PCA()
+    pca.fit(stats)
+    evr = pca.explained_variance_ratio_
+    variance_sum = 0.0
+    n_components = stats.shape[0]
+    
+    # Select the number of components to keep based on the variance cutoff 
+    for index in range(n_components):
+        variance_sum += evr[index]
+        if variance_sum > variance_cutoff:
+            n_components = index+1
+            break
+            
+    # Project the stats onto the subset of components
+    pca = PCA(n_components = n_components)
+    pca.fit(stats)
+    reduced_stats = pca.transform(stats)
         
     return reduced_stats,pca
-
+    
 #-------------------------------------------------------------------------------
 
 '''
@@ -41,14 +41,14 @@ Use a training set of dimensionaly reduced stats to train the svr predictor of t
 
 def train(reduced_stats,punative_actions,C,epsilon,kernel,degree,gamma):
     
-        svr = SVR(C=C,epsilon=epsilon,kernel=kernel,degree=degree,gamma=gamma)
-        
-        # Train each svr and append it to a list of trained svrs
-        trained_svr = []
-        n_punative_actions = punative_actions.shape[0]
-        for index in range():
-            svr.fit(reduced_stats,punative_actions[index,:])
-            trained_svr.append(svr)
+    svr = SVR(C=C,epsilon=epsilon,kernel=kernel,degree=degree,gamma=gamma)
+    
+    # Train each svr and append it to a list of trained svrs
+    trained_svr = []
+    n_punative_actions = punative_actions.shape[0]
+    for index in range():
+        svr.fit(reduced_stats,punative_actions[index,:])
+        trained_svr.append(svr)
         
     return trained_svr,n_punative_actions
 
