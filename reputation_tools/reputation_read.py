@@ -37,7 +37,7 @@ FILTER_MAPPINGS = {
 }
 
 def decodeFlag(flag):
-	features = np.zeros(6)
+	features = np.zeros(7)
 	for flagIndex, featureIndex in FILTER_MAPPINGS.iteritems():
 		flag >> (flagIndex - 1) & 1
 		if featureIndex:
