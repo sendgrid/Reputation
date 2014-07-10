@@ -96,3 +96,14 @@ evaluate:
 Take in a training data set and a test data set, for both of which the punative
 actions are known. Use the svrs from the training set to predict the punative actions on the test set. Calculate the euclidean error in the predicted and actual punative actions of the test data. 
 '''
+
+def evaluate(test_punative_actions,true_punative_actions,metric):
+    
+    if metric is "weak":
+        return np.sqrt(np.sum(np.mean(test_punative_actions-true_punative_actions,0)**2.0,1))
+        
+    elif metric is "strong":
+        return np.mean(np.sqrt(np.sum((test_punative_actions-true_punative_actions)**2.0,1)),0)
+        
+    else:
+        return None
