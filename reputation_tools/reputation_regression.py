@@ -22,6 +22,23 @@ def anovaKernel(x, y, gamma, D):
 
 #-------------------------------------------------------------------------------
 
+def normalize(stats,mc_downsample):
+    
+    n_senders = stats.shape[0]
+    requests = np.maximum(stats[:,0],np.ones(n_senders))
+    delivered = np.maximum(stats[:,1],np.ones(n_senders))
+    opens = np.maximum(stats[:,8],np.ones(n_senders))
+    
+    stats[:,[1,2,3,4]] = np.divide(stats[:,[1,2,3,4]],np.outer(requests,np.ones(4)))
+    stats[:,[5,8,9]] = np.divide(stats[:,[5,8,9]],np.outer(delivered,np.ones(3)))
+    stats[:,[6,7,10]] = np.divide(stats[:,[6,7,10]],np.outer(opens,np.ones(3)))
+    stats[:,[11,12,13,14]] = np.divide(stats[:,[11,12,13,14]],np.outer(mc_downsample*requests,np.ones(4)))
+    stats[:,[15,16,17]] = np.divide(stats[:,[15,16,17]],np.outer(requests,np.ones(3)))
+    
+    return stats
+
+#-------------------------------------------------------------------------------
+
 '''
 reduce:
 Project the stats onto a lower dimensional space which preserves variance up to the specified cutoff.
@@ -29,7 +46,7 @@ Project the stats onto a lower dimensional space which preserves variance up to 
 
 def reduce(stats,variance_cutoff):
     
-    pca = PCA()
+    pca = PCA(whiten=True)
     pca.fit(stats)
     evr = pca.explained_variance_ratio_
     variance_sum = 0.0
@@ -53,57 +70,58 @@ def reduce(stats,variance_cutoff):
 
 '''
 train:
-Use a training set of dimensionaly reduced stats to train the svr predictor of the punative actions. 
+Use a training set of dimensionaly reduced stats to train the svr predictor of the punitive actions. 
 '''    
 
-def train(reduced_stats,punative_actions,C,epsilon,kernel,degree,gamma):
-    
-    svr = SVR(C=C,epsilon=epsilon,kernel=kernel,degree=degree,gamma=gamma)
-    
+def train(train_stats,train_punitive_actions,C=1.0,epsilon=0.1,kernel='rbf',degree=3,gamma=0.0):
+        
     # Train each svr and append it to a list of trained svrs
     trained_svr = []
-    n_punative_actions = punative_actions.shape[0]
-    for index in range():
-        svr.fit(reduced_stats,punative_actions[index,:])
+    n_punitive_actions = train_punitive_actions.shape[1]
+    for index in range(n_punitive_actions):
+        svr = SVR(C=C,epsilon=epsilon,kernel=kernel,degree=degree,gamma=gamma)
+        svr.fit(train_stats,train_punitive_actions[:,index])
         trained_svr.append(svr)
         
-    return trained_svr,n_punative_actions
+    return trained_svr
 
 #-------------------------------------------------------------------------------
 
 '''
 regress:
-Use the trained svrs to predict the punative actions for a set of test data.
+Use the trained svrs to predict the punitive actions for a set of test data.
 '''
 
-def regress(trained_svr,pca,test_stats,n_punative_actions):
+def regress(trained_svr,test_stats,pca=None,reduced=True):
     
     # Project the test_stats onto the same subset of components as the training stats
-    reduced_stats = pca.transform(test_stats)
+    if not reduced:
+        test_stats = pca.transform(test_stats)
     
     # Perform the regression using the trained svrs
-    predicted_punative_actions = np.zeros(reduced_stats.shape[0],n_punative_actions)
-    for index in range(n_punative_actions):
+    n_punitive_actions = len(trained_svr)
+    predicted_punitive_actions = np.zeros((test_stats.shape[0],n_punitive_actions))
+    for index in range(n_punitive_actions):
         svr = trained_svr[index]
-        predicted_punative_actions[:,index] = svr.predict(test_data)
+        predicted_punitive_actions[:,index] = svr.predict(test_stats)
         
-    return predicted_punative_actions
+    return predicted_punitive_actions
 
 #-------------------------------------------------------------------------------
 
 '''
 evaluate:
-Take in a training data set and a test data set, for both of which the punative
-actions are known. Use the svrs from the training set to predict the punative actions on the test set. Calculate the euclidean error in the predicted and actual punative actions of the test data. 
+Take in a training data set and a test data set, for both of which the punitive
+actions are known. Use the svrs from the training set to predict the punitive actions on the test set. Calculate the euclidean error in the predicted and actual punitive actions of the test data. 
 '''
 
-def evaluate(test_punative_actions,true_punative_actions,metric):
+def evaluate(predicted_punitive_actions,test_punitive_actions,metric='weak'):
     
     if metric is "weak":
-        return np.sqrt(np.sum(np.mean(test_punative_actions-true_punative_actions,0)**2.0,1))
+        return np.sqrt(np.sum(np.mean(predicted_punitive_actions-test_punitive_actions,0)**2.0))
         
     elif metric is "strong":
-        return np.mean(np.sqrt(np.sum((test_punative_actions-true_punative_actions)**2.0,1)),0)
+        return np.mean(np.sqrt(np.sum((predicted_punitive_actions-test_punitive_actions)**2.0,1)))
         
     else:
         return None

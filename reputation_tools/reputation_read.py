@@ -14,7 +14,6 @@ sender_fields = [
     "bounces",
     "blocked",
     "invalid",
-    "invalid_domain",
     "spam_report",
     "clicks",
     "unique_clicks",
@@ -37,17 +36,16 @@ FILTER_MAPPINGS = {
 }
 
 def decodeFlag(flag):
-
-	features = np.zeros(7)
-    if flag is "NULL":
+    
+    features = np.zeros(7)
+    if flag == u'NULL':
         return features
         
-	for flagIndex, featureIndex in FILTER_MAPPINGS.iteritems():
-		flag >> (flagIndex - 1) & 1
-		if featureIndex:
-			features[featureIndex] = 1
-            
-	return features
+    for flagIndex, featureIndex in FILTER_MAPPINGS.iteritems():
+        if featureIndex is not None:
+            features[featureIndex] = flag >> (flagIndex - 1) & 1
+        
+    return features
 
 #-------------------------------------------------------------------------------
 
@@ -70,6 +68,8 @@ def read_senders(datafile):
         
         uid = content['user_id']
         flag = content["verdict_flag"]
+        if flag == u'NULL':
+            continue
         features = decodeFlag(flag)
         n_features = len(features)
         
@@ -85,11 +85,10 @@ def read_senders(datafile):
         else:
             sender_index = uid_dict[uid]
             
-        # Add counts for each of the fields and mail channels + blacklists (stored in verdict flag)    
+        # Add counts for each of the fields and mail channels + blacklists (stored in verdict flag)
         for index in range(n_fields):
             sender_stats[sender_index,index] += content[sender_fields[index]]
-        for index in range(n_features):
-            sender_stats[sender_index,n_fields+index] = features[index]
+        sender_stats[sender_index,n_fields:] += features
 
     return sender_stats,row_dict,uid_dict
     
