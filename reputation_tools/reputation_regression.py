@@ -22,12 +22,12 @@ def anovaKernel(x, y, gamma, D):
 
 #-------------------------------------------------------------------------------
 
-def normalize(stats,mc_downsample):
-    
-    n_senders = stats.shape[0]
-    requests = np.maximum(stats[:,0],np.ones(n_senders))
-    delivered = np.maximum(stats[:,1],np.ones(n_senders))
-    opens = np.maximum(stats[:,8],np.ones(n_senders))
+def normalize(pre_stats,mc_downsample):
+    stats = pre_stats.copy()
+    n_senders = pre_stats.shape[0]
+    requests = np.maximum(pre_stats[:,0],np.ones(n_senders))
+    delivered = np.maximum(pre_stats[:,1],np.ones(n_senders))
+    opens = np.maximum(pre_stats[:,8],np.ones(n_senders))
     
     stats[:,[1,2,3,4]] = np.divide(stats[:,[1,2,3,4]],np.outer(requests,np.ones(4)))
     stats[:,[5,8,9]] = np.divide(stats[:,[5,8,9]],np.outer(delivered,np.ones(3)))
